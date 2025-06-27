@@ -2,10 +2,9 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from datetime import date
 
-from datetime import datetime
-
-# 🔐 Google Sheets authenticatie via Streamlit secrets
+# Google Sheets authenticatie via Streamlit secrets
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -13,34 +12,39 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = dict(st.secrets["google"])
+creds_dict = dict(st.secrets["gcp_service_account"])
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("zakgeld_data").sheet1
 
-# 📥 Vorige records ophalen
+# Ophalen vorige records
 records = sheet.get_all_records()
 vorige_cumulatief = records[-1]["Totaal Over"] if records else 0
 
-# 📌 Instellingen
+# Instellingen
 ZAKGELD_PER_WEEK = 5
 VASTE_KOSTEN_HUUR = 3
 VASTE_KOSTEN_ETEN = 1
 
 st.title("💰 Zakgeld Spel")
 
-# 📆 Week + jaar invoer
-jaar = st.number_input("Jaar", min_value=2023, max_value=2100, value=datetime.now().year)
-week = st.number_input("Weeknummer", min_value=1, max_value=53, value=datetime.now().isocalendar().week)
-week_id = f"Week {int(week)} - {int(jaar)}"
+# Automatisch week en jaar bepalen
+vandaag = date.today()
+weeknummer = vandaag.isocalendar().week
+jaar = vandaag.year
+week_id = f"Week {weeknummer} - {jaar}"
 
-st.subheader("📋 Invoer van deze week")
+st.markdown(f"**Huidige week:** {week_id}")
+st.markdown(f"**Zakgeld:** €{ZAKGELD_PER_WEEK}")
+st.markdown(f"**Vaste lasten:** Huur €{VASTE_KOSTEN_HUUR} + Eten €{VASTE_KOSTEN_ETEN}")
+
+st.subheader("📋 Invoer voor deze week")
 
 klusjes_verdiensten = st.number_input("Geld verdiend met klusjes (€)", min_value=0, value=0)
 gespaard = st.number_input("Geld om te sparen (€)", min_value=0, value=0)
 uitgegeven = st.number_input("Geld uitgegeven (€)", min_value=0, value=0)
 
-# 💶 Berekeningen
+# Berekeningen
 inkomen = ZAKGELD_PER_WEEK + klusjes_verdiensten
 uitgaven = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN + gespaard + uitgegeven
 over = inkomen - uitgaven
@@ -58,7 +62,7 @@ if st.button("✅ Bevestig deze week"):
     st.success(f"Week {week_id} opgeslagen!")
     st.balloons()
 
-# 📊 Overzicht en visualisatie
+# Visualisatie overzicht
 st.subheader("📈 Overzicht")
 
 df = pd.DataFrame(sheet.get_all_records())
