@@ -31,9 +31,6 @@ USERS = load_users(CRED_PATH)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
 if not st.session_state.logged_in:
     st.title("🔐 Inloggen")
     user_input = st.text_input("Gebruikersnaam", key="login_user")
@@ -44,15 +41,11 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.username  = user_input
             st.success(f"✅ Welkom, {user_input}!")
-
-            # ── HACK: forceer een rerun door de dummy‐state te bumpen
-            st.session_state["__rerun_id"] = str(uuid.uuid4())
-            st.stop()   # <-- helemaal stoppen, de pagina herlaadt nu
-
+            st.session_state["__rerun_id"] = str(uuid.uuid4())  # forceer rerun
+            st.stop()
         else:
             st.error("❌ Foutieve gebruikersnaam of wachtwoord")
 
-    # voorkom dat wél de rest van je app in deze run wordt uitgevoerd
     st.stop()
 
 user = st.session_state.username
@@ -73,7 +66,7 @@ sheet = client.open("zakgeld_data").sheet1
 # 5) Haal alleen de relevante records op
 all_records = sheet.get_all_records()
 records = [r for r in all_records if r["Gebruiker"] == user]
-prev_balance = records[-1]["Totaal Over"] if records else 0
+prev_balance = float(records[-1]["Totaal Over"]) if records else 0  # FIX HIER
 
 # 6) Constantes
 ZAKGELD_PER_WEEK = 5
@@ -124,11 +117,8 @@ if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     sheet.append_row(row)
     st.success("🎉 Week opgeslagen!")
 
-    # ── HACK: forceer rerun via dummy‐state bump
     st.session_state["__rerun_id"] = str(uuid.uuid4())
     st.stop()
-
-# … eerder in je bestand …
 
 # 8) Overzicht & grafieken
 st.subheader("📈 Overzicht")
@@ -137,25 +127,20 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # 1) Strip whitespace uit headers
     df.columns = df.columns.str.strip()
 
-    # 2) Zorg dat we écht een 'Week ID' col hebben
     if "Week" in df.columns and "Week ID" not in df.columns:
         df.rename(columns={"Week": "Week ID"}, inplace=True)
 
-    # 3) Forceer numeriek waar nodig
     for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # 4) Sorteer op week‐volgorde
     import re
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
         return (int(m[1]), int(m[2])) if m else (9999, 9999)
 
-    # KeyError voorkomen door te checken of Week ID nu bestaat
     if "Week ID" in df.columns:
         cats = sorted(df["Week ID"].unique(), key=parse_week)
         df["Week ID"] = pd.Categorical(df["Week ID"],
@@ -164,13 +149,12 @@ else:
     else:
         st.warning("⚠️ Geen kolom 'Week ID' gevonden, niet gesorteerd.")
 
-    # 5) Bouw de charts
     import altair as alt
     if "Week ID" in df.columns:
         base = alt.Chart(df).encode(x="Week ID:N")
         duo = alt.layer(
             base.mark_line(color="green").encode(y="Inkomen:Q"),
-            base.mark_line(color="red").encode( y="Uitgaven:Q")
+            base.mark_line(color="red").encode(y="Uitgaven:Q")
         ).properties(width=700, height=300,
                      title="Inkomen vs Uitgaven")
         st.altair_chart(duo, use_container_width=True)
@@ -181,6 +165,5 @@ else:
                      title="Cumulatieve Stand")
         st.altair_chart(cum, use_container_width=True)
 
-    # 6) Toon de tabel
     st.subheader("📄 Volledige gegevens")
     st.dataframe(df)
