@@ -22,9 +22,8 @@ def load_users(fp: Path) -> dict[str, str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        parts = [p.strip() for p in line.split(",")]
-        if len(parts) == 2:
-            users[parts[0]] = parts[1]
+        u, p = [p.strip() for p in line.split(",")]
+        users[u] = p
     return users
 
 USERS = load_users(CRED_PATH)
@@ -75,7 +74,7 @@ sheet = client.open("zakgeld_data").sheet1
 # 5) Bestaande records en vorige stand
 all_records = sheet.get_all_records()
 records = [r for r in all_records if r.get("Gebruiker") == user]
-prev_balance = records[-1]["Totaal Over"] if records else 0
+prev_balance = records[-1].get("Totaal Over", 0) if records else 0
 
 # 6) Constantes
 ZAKGELD_PER_WEEK  = 5
@@ -138,23 +137,29 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # Schoon kolomnamen af en rename indien nodig
+    # — stap A: strip whitespace & normalize namen —
     df.columns = df.columns.str.strip()
     if "Week ID" not in df.columns:
         if "Week" in df.columns:
             df.rename(columns={"Week": "Week ID"}, inplace=True)
-    # Rename 'Uitgegeven' of 'Uitgeven' naar 'Uitgaven'
-    if "Uitgegeven" in df.columns:
-        df.rename(columns={"Uitgegeven": "Uitgaven"}, inplace=True)
-    if "Uitgeven" in df.columns:
-        df.rename(columns={"Uitgeven": "Uitgaven"}, inplace=True)
+    # fix variant kolomnamen voor ‘Uitgaven’
+    for old in ("Uitgegeven", "Uitgeven"):
+        if old in df.columns:
+            df.rename(columns={old: "Uitgaven"}, inplace=True)
 
-    # Forceer numeriek
-    for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
+    # — stap B: veilige numerieke conversie —
+    for col in ("Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"):
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+            try:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+            except TypeError:
+                # fallback: element‐wise cast ints/floats, else NaN
+                df[col] = df[col].apply(lambda v: float(v) if isinstance(v, (int, float)) else None)
 
-    # Sortering Week ID
+    # show you the dtypes so you can verify
+    st.write("Kolommen & dtypes:", dict(df.dtypes))
+
+    # — stap C: sorteer Week ID —
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
         return (int(m.group(1)), int(m.group(2))) if m else (9999, 9999)
@@ -162,7 +167,8 @@ else:
     cats = sorted(df["Week ID"].unique(), key=parse_week)
     df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
 
-    # Chart: alleen Inkomen & Uitgaven
+    # — stap D: maak de Altair‐charts —
+    # 1) Inkomen vs Uitgaven
     base = alt.Chart(df).encode(x=alt.X("Week ID:N", title="Week"))
     duo = alt.layer(
         base.mark_line(color="green")
@@ -170,10 +176,9 @@ else:
         base.mark_line(color="red")
             .encode(y=alt.Y("Uitgaven:Q"),               tooltip=["Week ID","Uitgaven"])
     ).properties(width=700, height=350, title="Inkomen vs Uitgaven per Week")
-
     st.altair_chart(duo, use_container_width=True)
 
-    # Cumulatieve stand
+    # 2) Cumulatieve stand
     cumc = (
         alt.Chart(df)
         .mark_line(color="black")
