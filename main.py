@@ -15,6 +15,7 @@ USERS = {
 def login():
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
+
     if not st.session_state.logged_in:
         st.title("🔐 Inloggen")
         username = st.text_input("Gebruikersnaam")
@@ -24,12 +25,11 @@ def login():
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.success(f"Welkom, {username}!")
+                # Na succes, trigger rerun buiten de functie
                 st.experimental_rerun()
             else:
                 st.error("Foutieve gebruikersnaam of wachtwoord")
         st.stop()
-
-login()
 
 # --- Start app na login ---
 
