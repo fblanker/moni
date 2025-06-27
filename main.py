@@ -31,23 +31,28 @@ USERS = load_users(CRED_PATH)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
 if not st.session_state.logged_in:
     st.title("🔐 Inloggen")
     user_input = st.text_input("Gebruikersnaam", key="login_user")
-    pw_input = st.text_input("Wachtwoord", type="password", key="login_pw")
+    pw_input   = st.text_input("Wachtwoord", type="password", key="login_pw")
 
     if st.button("Inloggen"):
         if USERS.get(user_input) == pw_input:
             st.session_state.logged_in = True
-            st.session_state.username = user_input
+            st.session_state.username  = user_input
             st.success(f"✅ Welkom, {user_input}!")
 
-            # ── HACK: forceer rerun via dummy‐state bump
+            # ── HACK: forceer een rerun door de dummy‐state te bumpen
             st.session_state["__rerun_id"] = str(uuid.uuid4())
-            st.stop()
+            st.stop()   # <-- helemaal stoppen, de pagina herlaadt nu
+
         else:
             st.error("❌ Foutieve gebruikersnaam of wachtwoord")
 
+    # voorkom dat wél de rest van je app in deze run wordt uitgevoerd
     st.stop()
 
 user = st.session_state.username
