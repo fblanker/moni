@@ -3,7 +3,9 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Use secrets
+from datetime import datetime
+
+# 🔐 Google Sheets authenticatie via Streamlit secrets
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -11,39 +13,22 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = st.secrets["google"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
+creds_dict = dict(st.secrets["gcp_service_account"])
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
-sheet = client.open("data_zakgeld").sheet1
+sheet = client.open("zakgeld_data").sheet1
 
-# Huidige gegevens ophalen
+# 📥 Vorige records ophalen
 records = sheet.get_all_records()
-vorige_spaarpot = records[-1]["Spaarpot"] if records else 0
+vorige_cumulatief = records[-1]["Totaal Over"] if records else 0
 
-# Streamlit UI
-st.title("💰 Zakgeld Spel - Weekbudget")
+# 📌 Instellingen
+ZAKGELD_PER_WEEK = 5
+VASTE_KOSTEN_HUUR = 3
+VASTE_KOSTEN_ETEN = 1
 
-week = st.number_input("Weeknummer", min_value=1, step=1)
-zakgeld = st.number_input("Zakgeld deze week (€)", value=10)
-huur = st.number_input("Huur (€)", value=2)
-eten = st.number_input("Eten (€)", value=3)
-plezier = st.number_input("Plezier (€)", value=1)
-gespaard = st.number_input("Wil je sparen? (€)", value=2)
+st.title("💰 Zakgeld Spel")
 
-# Berekening
-totaal_besteden = huur + eten + plezier + gespaard
-over = zakgeld - totaal_besteden
-spaarpot = vorige_spaarpot + gespaard
-
-if st.button("Bevestig week"):
-    rij = [week, zakgeld, huur, eten, plezier, gespaard, spaarpot, over]
-    sheet.append_row(rij)
-    st.success(f"Week {week} is opgeslagen!")
-    st.balloons()
-
-# Overzicht tonen
-if records:
-    df = pd.DataFrame(records)
-    st.subheader("📊 Overzicht")
-    st.line_chart(df[["Spaarpot", "Over"]])
-    st.dataframe(df)
+# 📆 Week + jaar invoer
+jaar = st.number_input("Jaar", min_value=2023, max_value=2100, value=datetime.now().year)
+week = st.number_input("Weeknummer", min_value=1, max_value=53, value=datetime.no_
