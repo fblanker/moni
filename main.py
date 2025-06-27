@@ -7,9 +7,9 @@ import altair as alt
 
 # --- Simpele login ---
 USERS = {
-    "anna": "wachtwoord123",
-    "peter": "geheim456",
-    "maria": "streamlit789"
+    "nayeli": "30082019",
+    "royel": "10122019",
+    "cayen": "24042020"
 }
 
 def login():
