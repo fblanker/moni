@@ -3,3 +3,4 @@ google-auth
 oauth2client
 pandas
 streamlit>=1.10.0
+json
