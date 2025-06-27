@@ -7,7 +7,7 @@ from pathlib import Path
 import altair as alt
 import re
 
-# 1) Pagina-configuratie
+# 1) Pagina‐configuratie
 st.set_page_config(page_title="💰 Zakgeld Spel", layout="centered")
 
 # 2) Credentials inladen
@@ -50,7 +50,6 @@ def login():
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.success(f"✅ Welkom, {username}!")
-                    # rest van script loopt nu door
                 else:
                     st.error("❌ Foutieve gebruikersnaam of wachtwoord")
                     st.session_state.auth_clicks = 0
@@ -73,7 +72,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("zakgeld_data").sheet1
 
-# 5) Bestaande records ophalen
+# 5) Bestaande records en vorige stand
 all_records = sheet.get_all_records()
 records = [r for r in all_records if r.get("Gebruiker") == user]
 prev_balance = records[-1]["Totaal Over"] if records else 0
@@ -98,8 +97,8 @@ klusjes    = st.number_input("Geld verdiend met klusjes (€)", min_value=0, val
 uitgegeven = st.number_input("Geld uitgegeven (€)",             min_value=0, value=0)
 
 # 8) Berekeningen
-inkomen    = ZAKGELD_PER_WEEK + klusjes
-uitgaven   = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN + uitgegeven
+inkomen     = ZAKGELD_PER_WEEK + klusjes
+uitgaven    = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN + uitgegeven
 beschikbaar = prev_balance + (inkomen - uitgaven)
 
 st.markdown(f"**Beschikbaar om op te nemen:** €{beschikbaar}")
@@ -139,16 +138,18 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # Kolomnamen opschonen
+    # Schoon kolomnamen af en rename indien nodig
     df.columns = df.columns.str.strip()
     if "Week ID" not in df.columns:
         if "Week" in df.columns:
             df.rename(columns={"Week": "Week ID"}, inplace=True)
-        else:
-            st.error("Geen kolom 'Week' of 'Week ID' gevonden.")
-            st.stop()
+    # Rename 'Uitgegeven' of 'Uitgeven' naar 'Uitgaven'
+    if "Uitgegeven" in df.columns:
+        df.rename(columns={"Uitgegeven": "Uitgaven"}, inplace=True)
+    if "Uitgeven" in df.columns:
+        df.rename(columns={"Uitgeven": "Uitgaven"}, inplace=True)
 
-    # Numerieke kolommen forceren
+    # Forceer numeriek
     for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
