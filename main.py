@@ -4,10 +4,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import date
 from pathlib import Path
-import altair as alt
-import re
 
-# 1) Pagina-configuratie
+# 1) Pagina‐configuratie
 st.set_page_config(page_title="💰 Zakgeld Spel", layout="centered")
 
 # 2) Credentials inladen
@@ -28,19 +26,20 @@ def load_users(fp: Path) -> dict[str, str]:
 
 USERS = load_users(CRED_PATH)
 
-# 3) Eenvoudige login (1 klik)
+# 3) Login‐flow (1 klik)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.title("🔐 Inloggen")
-    username = st.text_input("Gebruikersnaam")
-    password = st.text_input("Wachtwoord", type="password")
+    user_input = st.text_input("Gebruikersnaam", key="login_user")
+    pw_input   = st.text_input("Wachtwoord", type="password", key="login_pw")
     if st.button("Inloggen"):
-        if USERS.get(username) == password:
+        if USERS.get(user_input) == pw_input:
             st.session_state.logged_in = True
-            st.session_state.username = username
-            st.success(f"✅ Welkom, {username}!")
+            st.session_state.username  = user_input
+            st.success(f"✅ Welkom, {user_input}!")
+            st.experimental_rerun()
         else:
             st.error("❌ Foutieve gebruikersnaam of wachtwoord")
     st.stop()
@@ -48,7 +47,7 @@ if not st.session_state.logged_in:
 user = st.session_state.username
 st.write(f"🔓 Ingelogd als **{user}**")
 
-# 4) Google Sheets authenticatie
+# 4) Google Sheets authenticatie via secrets.toml
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -60,10 +59,10 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("zakgeld_data").sheet1
 
-# 5) Haal records en vorige balans op
-all_records = sheet.get_all_records()
-records = [r for r in all_records if r.get("Gebruiker") == user]
-prev_balance = records[-1].get("Totaal Over", 0) if records else 0
+# 5) Haal alleen de relevante records op
+all_records = sheet.get_all_records()  # verwacht geen dubbele headers meer
+records = [r for r in all_records if r["Gebruiker"] == user]
+prev_balance = records[-1]["Totaal Over"] if records else 0
 
 # 6) Constantes
 ZAKGELD_PER_WEEK  = 5
@@ -71,7 +70,7 @@ VASTE_KOSTEN_HUUR = 3
 VASTE_KOSTEN_ETEN = 1
 TOTALE_VASTE_KOSTEN = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN
 
-# 7) Invoer klusjes & opname
+# 7) Invoer voor deze week
 st.title("💰 Zakgeld Spel")
 today = date.today()
 weeknum, year = today.isocalendar().week, today.year
@@ -79,16 +78,12 @@ week_id = f"Week {weeknum} - {year}"
 
 st.markdown(f"**Huidige week:** {week_id}")
 st.markdown(f"**Zakgeld:** €{ZAKGELD_PER_WEEK}")
-st.markdown(f"**Vaste lasten totaal:** €{TOTALE_VASTE_KOSTEN}")
+st.markdown(f"**Vaste lasten:** €{TOTALE_VASTE_KOSTEN}")
 
-st.subheader("📋 Invoer voor deze week")
-klusjes  = st.number_input("Geld verdiend met klusjes (€)", min_value=0, value=0)
-
-# Berekende velden
+klusjes     = st.number_input("Geld verdiend met klusjes (€)", min_value=0, value=0)
 inkomen     = ZAKGELD_PER_WEEK + klusjes
 uitgaven    = TOTALE_VASTE_KOSTEN
 beschikbaar = prev_balance + (inkomen - uitgaven)
-
 st.markdown(f"**Beschikbaar om op te nemen:** €{beschikbaar}")
 
 opgenomen = st.number_input(
@@ -99,13 +94,13 @@ opgenomen = st.number_input(
 )
 
 new_balance = prev_balance + (inkomen - uitgaven) - opgenomen
-
 if opgenomen > beschikbaar:
     st.warning("⚠️ Je kunt niet meer opnemen dan beschikbaar!")
     btn_disabled = True
 else:
     btn_disabled = False
 
+# Append‐row zonder “Uitgegeven”
 if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     row = [
         user,
@@ -117,7 +112,7 @@ if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     ]
     sheet.append_row(row)
     st.success("🎉 Week opgeslagen!")
-    st.info("🔄 Vernieuw de pagina om het overzicht bij te werken.")
+    st.experimental_rerun()
 
 # 8) Overzicht & grafieken
 st.subheader("📈 Overzicht")
@@ -126,52 +121,34 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # Strip en normalizeer kolomnamen
+    # kolomnamen strippen en numeriek forceren
     df.columns = df.columns.str.strip()
-    if "Week ID" not in df.columns and "Week" in df.columns:
-        df.rename(columns={"Week": "Week ID"}, inplace=True)
+    for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
+        if col in df:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # Drop dubbele kolommen
-    df = df.loc[:, ~df.columns.duplicated()]
-
-    # Forceer numerieke types
-    for col in ("Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"):
-        if col in df.columns:
-            try:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-            except TypeError:
-                df[col] = df[col].apply(lambda v: float(v) if isinstance(v, (int, float)) else None)
-
-    # Sorteren op Week ID
+    # sorteer op weeknummer
+    import re
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
-        return (int(m.group(1)), int(m.group(2))) if m else (9999, 9999)
-
+        return (int(m[1]), int(m[2])) if m else (9999, 9999)
     cats = sorted(df["Week ID"].unique(), key=parse_week)
     df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
 
     # Chart: Inkomen vs Uitgaven
-    base = alt.Chart(df).encode(x=alt.X("Week ID:N", title="Week"))
+    import altair as alt
+    base = alt.Chart(df).encode(x="Week ID:N")
     duo = alt.layer(
-        base.mark_line(color="green")
-            .encode(y=alt.Y("Inkomen:Q", title="€"), tooltip=["Week ID","Inkomen"]),
-        base.mark_line(color="red")
-            .encode(y=alt.Y("Uitgaven:Q"),               tooltip=["Week ID","Uitgaven"])
-    ).properties(width=700, height=350, title="Inkomen vs Uitgaven per Week")
+        base.mark_line(color="green").encode(y="Inkomen:Q"),
+        base.mark_line(color="red").encode( y="Uitgaven:Q")
+    ).properties(width=700, height=300, title="Inkomen vs Uitgaven")
     st.altair_chart(duo, use_container_width=True)
 
-    # Chart: Cumulatieve stand
-    cumc = (
-        alt.Chart(df)
-        .mark_line(color="black")
-        .encode(
-            x=alt.X("Week ID:N", title="Week"),
-            y=alt.Y("Totaal Over:Q", title="€"),
-            tooltip=["Week ID","Totaal Over"],
-        )
-        .properties(width=700, height=350, title="Cumulatieve Stand")
-    )
-    st.altair_chart(cumc, use_container_width=True)
+    # Cumulatieve stand
+    cum = alt.Chart(df).mark_line().encode(
+        x="Week ID:N", y="Totaal Over:Q"
+    ).properties(width=700, height=300, title="Cumulatieve Stand")
+    st.altair_chart(cum, use_container_width=True)
 
     st.subheader("📄 Volledige gegevens")
     st.dataframe(df)
