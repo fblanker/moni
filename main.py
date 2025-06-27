@@ -24,13 +24,12 @@ def login():
             if username in USERS and USERS[username] == password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.experimental_rerun()
+                st.success(f"Welkom, {username}!")
+                st.info("🔄 Herlaad de pagina om door te gaan.")
             else:
                 st.error("Foutieve gebruikersnaam of wachtwoord")
         st.stop()
 
-# Roep login aan
-login()
 
 # Stop als niet ingelogd
 if not st.session_state.get("logged_in", False):
