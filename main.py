@@ -11,7 +11,7 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = st.secrets["mozes-117@egyptcaanan.iam.gserviceaccount.com"]
+creds_dict = st.secrets["google"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
 client = gspread.authorize(creds)
 sheet = client.open("data_zakgeld").sheet1
