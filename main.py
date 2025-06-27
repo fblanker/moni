@@ -16,14 +16,15 @@ if not CRED_PATH.exists():
     st.error(f"❌ credentials.txt niet gevonden: {CRED_PATH}")
     st.stop()
 
-def load_users(fp: Path) -> dict[str,str]:
+def load_users(fp: Path) -> dict[str, str]:
     users = {}
     for line in fp.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        u, p = [p.strip() for p in line.split(",")]
-        users[u] = p
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) == 2:
+            users[parts[0]] = parts[1]
     return users
 
 USERS = load_users(CRED_PATH)
@@ -39,26 +40,21 @@ def login():
         st.title("🔐 Inloggen")
         username = st.text_input("Gebruikersnaam")
         password = st.text_input("Wachtwoord", type="password")
-
         if st.button("Inloggen"):
             st.session_state.auth_clicks += 1
             if st.session_state.auth_clicks == 1:
                 st.info("Druk nogmaals op **Inloggen** om door te gaan.")
                 st.stop()
             else:
-                # tweede druk: pas nu valideren
                 if USERS.get(username) == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.success(f"✅ Welkom, {username}!")
-                    # geen st.stop() meer; script loopt door
+                    # rest van script loopt nu door
                 else:
                     st.error("❌ Foutieve gebruikersnaam of wachtwoord")
-                    # reset klikken
                     st.session_state.auth_clicks = 0
                     st.stop()
-
-        # blokkeer rest van pagina tot ingelogd
         st.stop()
 
 login()
@@ -77,7 +73,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("zakgeld_data").sheet1
 
-# 5) Bestaande records en vorige stand
+# 5) Bestaande records ophalen
 all_records = sheet.get_all_records()
 records = [r for r in all_records if r.get("Gebruiker") == user]
 prev_balance = records[-1]["Totaal Over"] if records else 0
@@ -101,9 +97,9 @@ st.subheader("📋 Invoer voor deze week")
 klusjes    = st.number_input("Geld verdiend met klusjes (€)", min_value=0, value=0)
 uitgegeven = st.number_input("Geld uitgegeven (€)",             min_value=0, value=0)
 
-# beschikbaar om op te nemen is saldo_vorig + (inkomen - uitgaven)
-inkomen  = ZAKGELD_PER_WEEK + klusjes
-uitgaven = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN + uitgegeven
+# 8) Berekeningen
+inkomen    = ZAKGELD_PER_WEEK + klusjes
+uitgaven   = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN + uitgegeven
 beschikbaar = prev_balance + (inkomen - uitgaven)
 
 st.markdown(f"**Beschikbaar om op te nemen:** €{beschikbaar}")
@@ -115,7 +111,6 @@ opgenomen = st.number_input(
     value=0
 )
 
-# nieuwe cumulatieve stand
 new_balance = prev_balance + (inkomen - uitgaven) - opgenomen
 
 if opgenomen > beschikbaar:
@@ -135,40 +130,44 @@ if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     ]
     sheet.append_row(row)
     st.success("🎉 Week opgeslagen!")
-    # na deze widget‐actie loopt Streamlit vanzelf opnieuw
+    st.info("🔄 Vernieuw de pagina om het overzicht bij te werken.")
 
-# 8) Overzicht & grafieken
+# 9) Overzicht & grafieken
 st.subheader("📈 Overzicht")
 df = pd.DataFrame(records)
 
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # ————————————————
-    # Zorg dat we een kolom 'Week ID' hebben
+    # Kolomnamen opschonen
+    df.columns = df.columns.str.strip()
     if "Week ID" not in df.columns:
         if "Week" in df.columns:
             df.rename(columns={"Week": "Week ID"}, inplace=True)
         else:
-            st.error("Geen kolom 'Week ID' of 'Week' gevonden in je sheet.")
+            st.error("Geen kolom 'Week' of 'Week ID' gevonden.")
             st.stop()
-    # ————————————————
 
-    # Robuuste sortering op Week ID
+    # Numerieke kolommen forceren
+    for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    # Sortering Week ID
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
-        return (int(m[1]), int(m[2])) if m else (9999, 9999)
+        return (int(m.group(1)), int(m.group(2))) if m else (9999, 9999)
 
     cats = sorted(df["Week ID"].unique(), key=parse_week)
     df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
 
-    # Chart: alleen inkomen & uitgaven
+    # Chart: alleen Inkomen & Uitgaven
     base = alt.Chart(df).encode(x=alt.X("Week ID:N", title="Week"))
     duo = alt.layer(
         base.mark_line(color="green")
             .encode(y=alt.Y("Inkomen:Q", title="€"), tooltip=["Week ID","Inkomen"]),
         base.mark_line(color="red")
-            .encode(y=alt.Y("Uitgaven:Q"),              tooltip=["Week ID","Uitgaven"])
+            .encode(y=alt.Y("Uitgaven:Q"),               tooltip=["Week ID","Uitgaven"])
     ).properties(width=700, height=350, title="Inkomen vs Uitgaven per Week")
 
     st.altair_chart(duo, use_container_width=True)
