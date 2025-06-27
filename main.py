@@ -91,7 +91,7 @@ gespaard   = st.number_input("Geld om te sparen (€)",       min_value=0, value
 uitgegeven = st.number_input("Geld uitgegeven (€)",         min_value=0, value=0)
 
 inkomen    = ZAKGELD + klusjes
-uitgaven   = HUUR + ETEN + gespaar d + uitgegeven
+uitgaven   = HUUR + ETEN + gespaard + uitgegeven
 over       = inkomen - uitgaven
 cumul      = prev_cum + over
 
