@@ -66,7 +66,13 @@ sheet = client.open("zakgeld_data").sheet1
 # 5) Haal alleen de relevante records op
 all_records = sheet.get_all_records()
 records = [r for r in all_records if r["Gebruiker"] == user]
-prev_balance = float(records[-1]["Totaal Over"]) if records else 0  # FIX HIER
+try:
+    prev_balance = float(records[-1]["Totaal Over"])
+except (KeyError, ValueError, IndexError):
+    prev_balance = 0
+
+
+
 
 # 6) Constantes
 ZAKGELD_PER_WEEK = 5
