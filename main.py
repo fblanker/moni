@@ -128,6 +128,8 @@ if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     st.session_state["__rerun_id"] = str(uuid.uuid4())
     st.stop()
 
+# … eerder in je bestand …
+
 # 8) Overzicht & grafieken
 st.subheader("📈 Overzicht")
 df = pd.DataFrame(records)
@@ -135,31 +137,50 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
+    # 1) Strip whitespace uit headers
     df.columns = df.columns.str.strip()
+
+    # 2) Zorg dat we écht een 'Week ID' col hebben
+    if "Week" in df.columns and "Week ID" not in df.columns:
+        df.rename(columns={"Week": "Week ID"}, inplace=True)
+
+    # 3) Forceer numeriek waar nodig
     for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
-        if col in df:
+        if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
+    # 4) Sorteer op week‐volgorde
     import re
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
         return (int(m[1]), int(m[2])) if m else (9999, 9999)
 
-    cats = sorted(df["Week ID"].unique(), key=parse_week)
-    df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
+    # KeyError voorkomen door te checken of Week ID nu bestaat
+    if "Week ID" in df.columns:
+        cats = sorted(df["Week ID"].unique(), key=parse_week)
+        df["Week ID"] = pd.Categorical(df["Week ID"],
+                                       ordered=True,
+                                       categories=cats)
+    else:
+        st.warning("⚠️ Geen kolom 'Week ID' gevonden, niet gesorteerd.")
 
+    # 5) Bouw de charts
     import altair as alt
-    base = alt.Chart(df).encode(x="Week ID:N")
-    duo = alt.layer(
-        base.mark_line(color="green").encode(y="Inkomen:Q"),
-        base.mark_line(color="red").encode(y="Uitgaven:Q"),
-    ).properties(width=700, height=300, title="Inkomen vs Uitgaven")
-    st.altair_chart(duo, use_container_width=True)
+    if "Week ID" in df.columns:
+        base = alt.Chart(df).encode(x="Week ID:N")
+        duo = alt.layer(
+            base.mark_line(color="green").encode(y="Inkomen:Q"),
+            base.mark_line(color="red").encode( y="Uitgaven:Q")
+        ).properties(width=700, height=300,
+                     title="Inkomen vs Uitgaven")
+        st.altair_chart(duo, use_container_width=True)
 
-    cum = alt.Chart(df).mark_line().encode(
-        x="Week ID:N", y="Totaal Over:Q"
-    ).properties(width=700, height=300, title="Cumulatieve Stand")
-    st.altair_chart(cum, use_container_width=True)
+        cum = alt.Chart(df).mark_line().encode(
+            x="Week ID:N", y="Totaal Over:Q"
+        ).properties(width=700, height=300,
+                     title="Cumulatieve Stand")
+        st.altair_chart(cum, use_container_width=True)
 
+    # 6) Toon de tabel
     st.subheader("📄 Volledige gegevens")
     st.dataframe(df)
