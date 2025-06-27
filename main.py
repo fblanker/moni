@@ -4,7 +4,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import date
 from pathlib import Path
-import uuid  # ← NEW: voor de rerun‐hack
+import uuid  # ← nieuw: voor de rerun‐hack
 
 # 1) Pagina‐configuratie
 st.set_page_config(page_title="💰 Zakgeld Spel", layout="centered")
@@ -16,7 +16,7 @@ if not CRED_PATH.exists():
     st.stop()
 
 def load_users(fp: Path) -> dict[str, str]:
-    users = {}
+    users: dict[str, str] = {}
     for line in fp.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -27,32 +27,33 @@ def load_users(fp: Path) -> dict[str, str]:
 
 USERS = load_users(CRED_PATH)
 
-# 3) Login‐flow (1 klik)
+# 3) Login‐flow
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.title("🔐 Inloggen")
     user_input = st.text_input("Gebruikersnaam", key="login_user")
-    pw_input   = st.text_input("Wachtwoord", type="password", key="login_pw")
+    pw_input = st.text_input("Wachtwoord", type="password", key="login_pw")
 
     if st.button("Inloggen"):
         if USERS.get(user_input) == pw_input:
             st.session_state.logged_in = True
-            st.session_state.username  = user_input
+            st.session_state.username = user_input
             st.success(f"✅ Welkom, {user_input}!")
 
-            # ── HACK: forceer rerun via UUID bump
+            # ── HACK: forceer rerun via dummy‐state bump
             st.session_state["__rerun_id"] = str(uuid.uuid4())
             st.stop()
         else:
             st.error("❌ Foutieve gebruikersnaam of wachtwoord")
+
     st.stop()
 
 user = st.session_state.username
 st.write(f"🔓 Ingelogd als **{user}**")
 
-# 4) Google Sheets authenticatie via secrets.toml
+# 4) Google Sheets authenticatie
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -70,9 +71,9 @@ records = [r for r in all_records if r["Gebruiker"] == user]
 prev_balance = records[-1]["Totaal Over"] if records else 0
 
 # 6) Constantes
-ZAKGELD_PER_WEEK  = 5
-VASTE_KOSTEN_HUUR  = 3
-VASTE_KOSTEN_ETEN  = 1
+ZAKGELD_PER_WEEK = 5
+VASTE_KOSTEN_HUUR = 3
+VASTE_KOSTEN_ETEN = 1
 TOTALE_VASTE_KOSTEN = VASTE_KOSTEN_HUUR + VASTE_KOSTEN_ETEN
 
 # 7) Invoer voor deze week
@@ -85,9 +86,9 @@ st.markdown(f"**Huidige week:** {week_id}")
 st.markdown(f"**Zakgeld:** €{ZAKGELD_PER_WEEK}")
 st.markdown(f"**Vaste lasten:** €{TOTALE_VASTE_KOSTEN}")
 
- klusjes   = st.number_input("Geld verdiend met klusjes (€)", min_value=0, value=0)
-inkomen   = ZAKGELD_PER_WEEK + klusjes
-uitgaven  = TOTALE_VASTE_KOSTEN
+klusjes = st.number_input("Geld verdiend met klusjes (€)", min_value=0, value=0)
+inkomen = ZAKGELD_PER_WEEK + klusjes
+uitgaven = TOTALE_VASTE_KOSTEN
 beschikbaar = prev_balance + (inkomen - uitgaven)
 
 st.markdown(f"**Beschikbaar om op te nemen:** €{beschikbaar}")
@@ -106,7 +107,6 @@ if opgenomen > beschikbaar:
 else:
     btn_disabled = False
 
-# Append‐row zonder “Uitgegeven”
 if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     row = [
         user,
@@ -119,7 +119,7 @@ if st.button("✅ Bevestig deze week", disabled=btn_disabled):
     sheet.append_row(row)
     st.success("🎉 Week opgeslagen!")
 
-    # ── HACK: forceer rerun via UUID bump
+    # ── HACK: forceer rerun via dummy‐state bump
     st.session_state["__rerun_id"] = str(uuid.uuid4())
     st.stop()
 
@@ -130,13 +130,11 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # kolomnamen strippen en numeriek forceren
     df.columns = df.columns.str.strip()
     for col in ["Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"]:
         if col in df:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # sorteer op weeknummer
     import re
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
@@ -145,16 +143,14 @@ else:
     cats = sorted(df["Week ID"].unique(), key=parse_week)
     df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
 
-    # Chart: Inkomen vs Uitgaven
     import altair as alt
     base = alt.Chart(df).encode(x="Week ID:N")
     duo = alt.layer(
         base.mark_line(color="green").encode(y="Inkomen:Q"),
-        base.mark_line(color="red").encode( y="Uitgaven:Q")
+        base.mark_line(color="red").encode(y="Uitgaven:Q"),
     ).properties(width=700, height=300, title="Inkomen vs Uitgaven")
     st.altair_chart(duo, use_container_width=True)
 
-    # Cumulatieve stand
     cum = alt.Chart(df).mark_line().encode(
         x="Week ID:N", y="Totaal Over:Q"
     ).properties(width=700, height=300, title="Cumulatieve Stand")
