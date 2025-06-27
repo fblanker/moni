@@ -7,9 +7,9 @@ import altair as alt
 
 # --- Simpele login ---
 USERS = {
-    "nayeli": "30082019",
-    "royel": "10122019",
-    "cayen": "24042020"
+    "anna": "wachtwoord123",
+    "peter": "geheim456",
+    "maria": "streamlit789"
 }
 
 def login():
@@ -24,16 +24,22 @@ def login():
             if username in USERS and USERS[username] == password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.success(f"Welkom, {username}!")
-                # Na succes, trigger rerun buiten de functie
                 st.experimental_rerun()
             else:
                 st.error("Foutieve gebruikersnaam of wachtwoord")
         st.stop()
 
-# --- Start app na login ---
+# Roep login aan
+login()
 
-# Google Sheets authenticatie via Streamlit secrets
+# Stop als niet ingelogd
+if not st.session_state.get("logged_in", False):
+    st.stop()
+
+# Vanaf hier is gebruiker ingelogd
+user = st.session_state.username
+
+# --- Google Sheets authenticatie via Streamlit secrets ---
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -41,14 +47,14 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = dict(st.secrets["google"])
+creds_dict = dict(st.secrets["google"])  # Hier gebruik je "google" als key in secrets.toml
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("zakgeld_data").sheet1
 
-# Ophalen alle records en filter op gebruiker
+# Ophalen alle records en filter op ingelogde gebruiker
 alle_records = sheet.get_all_records()
-records = [r for r in alle_records if r.get("Gebruiker") == st.session_state.username]
+records = [r for r in alle_records if r.get("Gebruiker") == user]
 vorige_cumulatief = records[-1]["Totaal Over"] if records else 0
 
 # Instellingen
@@ -65,7 +71,7 @@ jaar = vandaag.year
 week_id = f"Week {weeknummer} - {jaar}"
 
 st.markdown(f"**Huidige week:** {week_id}")
-st.markdown(f"**Ingelogd als:** {st.session_state.username}")
+st.markdown(f"**Ingelogd als:** {user}")
 st.markdown(f"**Zakgeld:** €{ZAKGELD_PER_WEEK}")
 st.markdown(f"**Vaste lasten:** Huur €{VASTE_KOSTEN_HUUR} + Eten €{VASTE_KOSTEN_ETEN}")
 
@@ -89,12 +95,12 @@ else:
 
 if st.button("✅ Bevestig deze week", disabled=button_disabled):
     rij = [
-        st.session_state.username,  # Gebruiker
+        user,  # Gebruiker
         week_id, inkomen, VASTE_KOSTEN_HUUR, VASTE_KOSTEN_ETEN,
         klusjes_verdiensten, gespaard, uitgegeven, over, cumulatief
     ]
     sheet.append_row(rij)
-    st.success(f"Week {week_id} opgeslagen voor {st.session_state.username}!")
+    st.success(f"Week {week_id} opgeslagen voor {user}!")
     st.balloons()
 
 # Visualisatie overzicht
@@ -103,16 +109,26 @@ st.subheader("📈 Overzicht")
 df = pd.DataFrame(records)
 
 if not df.empty:
-    st.write(f"📄 Gegevens voor gebruiker: {st.session_state.username}")
+    st.write(f"📄 Gegevens voor gebruiker: {user}")
 
     # Zorg dat kolom Week ID bestaat en heet exact zo
     if "Week ID" not in df.columns and "Week" in df.columns:
         df.rename(columns={"Week": "Week ID"}, inplace=True)
 
-    # Zet kolom Week ID als categorische variabele, zodat weekvolgorde klopt
-    df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=sorted(df["Week ID"].unique(), key=lambda x: (int(x.split()[1].split('-')[0]), int(x.split()[2]))))
+    # Zet kolom Week ID als categorische variabele om correcte volgorde te houden
+    df["Week ID"] = pd.Categorical(
+        df["Week ID"],
+        ordered=True,
+        categories=sorted(
+            df["Week ID"].unique(),
+            key=lambda x: (
+                int(x.split()[1].split("-")[0]),  # weeknummer
+                int(x.split()[2])                 # jaar
+            )
+        )
+    )
 
-    # Inkomsten en uitgaven grafiek
+    # Altair grafiek inkomsten & uitgaven
     base = alt.Chart(df).encode(x=alt.X('Week ID:N', title='Week'))
 
     inkomsten_line = base.mark_line(color='green').encode(y='Inkomen:Q', tooltip=['Week ID', 'Inkomen'])
