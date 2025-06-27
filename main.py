@@ -22,8 +22,9 @@ def load_users(fp: Path) -> dict[str, str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        u, p = [p.strip() for p in line.split(",")]
-        users[u] = p
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) == 2:
+            users[parts[0]] = parts[1]
     return users
 
 USERS = load_users(CRED_PATH)
@@ -137,29 +138,29 @@ df = pd.DataFrame(records)
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # — stap A: strip whitespace & normalize namen —
+    # — A) Strip en normalizeer kolomnamen —
     df.columns = df.columns.str.strip()
-    if "Week ID" not in df.columns:
-        if "Week" in df.columns:
-            df.rename(columns={"Week": "Week ID"}, inplace=True)
-    # fix variant kolomnamen voor ‘Uitgaven’
-    for old in ("Uitgegeven", "Uitgeven"):
+    if "Week ID" not in df.columns and "Week" in df.columns:
+        df.rename(columns={"Week": "Week ID"}, inplace=True)
+    # Rename varianten voor Uitgaven
+    for old in ("Uitgeven", "Uitgegeven"):
         if old in df.columns:
             df.rename(columns={old: "Uitgaven"}, inplace=True)
 
-    # — stap B: veilige numerieke conversie —
+    # — B) Drop eventuele duplicate kolommen (bv. twee 'Uitgaven') —
+    df = df.loc[:, ~df.columns.duplicated()]
+
+    # — C) Veilige numerieke conversie —
     for col in ("Inkomen", "Uitgaven", "Opgenomen", "Totaal Over"):
         if col in df.columns:
             try:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
             except TypeError:
-                # fallback: element‐wise cast ints/floats, else NaN
                 df[col] = df[col].apply(lambda v: float(v) if isinstance(v, (int, float)) else None)
 
-    # show you the dtypes so you can verify
     st.write("Kolommen & dtypes:", dict(df.dtypes))
 
-    # — stap C: sorteer Week ID —
+    # — D) Sorteer Week ID —
     def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
         return (int(m.group(1)), int(m.group(2))) if m else (9999, 9999)
@@ -167,9 +168,9 @@ else:
     cats = sorted(df["Week ID"].unique(), key=parse_week)
     df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
 
-    # — stap D: maak de Altair‐charts —
-    # 1) Inkomen vs Uitgaven
+    # — E) Altair‐charts —
     base = alt.Chart(df).encode(x=alt.X("Week ID:N", title="Week"))
+
     duo = alt.layer(
         base.mark_line(color="green")
             .encode(y=alt.Y("Inkomen:Q", title="€"), tooltip=["Week ID","Inkomen"]),
@@ -178,7 +179,6 @@ else:
     ).properties(width=700, height=350, title="Inkomen vs Uitgaven per Week")
     st.altair_chart(duo, use_container_width=True)
 
-    # 2) Cumulatieve stand
     cumc = (
         alt.Chart(df)
         .mark_line(color="black")
