@@ -139,17 +139,25 @@ if st.button("✅ Bevestig deze week", disabled=btn_disabled):
 
 # 8) Overzicht & grafieken
 st.subheader("📈 Overzicht")
-# kolomnamen in sheet moeten nu zijn:
-# ["Gebruiker","Week ID","Inkomen","Uitgaven","Opgenomen","Totaal Over"]
 df = pd.DataFrame(records)
 
 if df.empty:
     st.info("Nog geen gegevens om te tonen.")
 else:
-    # sorteer Week ID
-    def parse_week(x):
+    # ————————————————
+    # Zorg dat we een kolom 'Week ID' hebben
+    if "Week ID" not in df.columns:
+        if "Week" in df.columns:
+            df.rename(columns={"Week": "Week ID"}, inplace=True)
+        else:
+            st.error("Geen kolom 'Week ID' of 'Week' gevonden in je sheet.")
+            st.stop()
+    # ————————————————
+
+    # Robuuste sortering op Week ID
+    def parse_week(x: str):
         m = re.match(r"Week\s+(\d+)\s*-\s*(\d+)", x)
-        return (int(m[1]), int(m[2])) if m else (9999,9999)
+        return (int(m[1]), int(m[2])) if m else (9999, 9999)
 
     cats = sorted(df["Week ID"].unique(), key=parse_week)
     df["Week ID"] = pd.Categorical(df["Week ID"], ordered=True, categories=cats)
@@ -157,8 +165,10 @@ else:
     # Chart: alleen inkomen & uitgaven
     base = alt.Chart(df).encode(x=alt.X("Week ID:N", title="Week"))
     duo = alt.layer(
-        base.mark_line(color="green").encode(y=alt.Y("Inkomen:Q", title="€"), tooltip=["Week ID","Inkomen"]),
-        base.mark_line(color="red")  .encode(y="Uitgaven:Q", tooltip=["Week ID","Uitgaven"])
+        base.mark_line(color="green")
+            .encode(y=alt.Y("Inkomen:Q", title="€"), tooltip=["Week ID","Inkomen"]),
+        base.mark_line(color="red")
+            .encode(y=alt.Y("Uitgaven:Q"),              tooltip=["Week ID","Uitgaven"])
     ).properties(width=700, height=350, title="Inkomen vs Uitgaven per Week")
 
     st.altair_chart(duo, use_container_width=True)
@@ -167,7 +177,11 @@ else:
     cumc = (
         alt.Chart(df)
         .mark_line(color="black")
-        .encode(x="Week ID:N", y=alt.Y("Totaal Over:Q", title="€"), tooltip=["Week ID","Totaal Over"])
+        .encode(
+            x=alt.X("Week ID:N", title="Week"),
+            y=alt.Y("Totaal Over:Q", title="€"),
+            tooltip=["Week ID","Totaal Over"],
+        )
         .properties(width=700, height=350, title="Cumulatieve Stand")
     )
     st.altair_chart(cumc, use_container_width=True)
