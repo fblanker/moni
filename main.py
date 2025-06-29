@@ -101,7 +101,7 @@ if st.session_state.get("user_type") == "ouder":
             st.warning("Vul naam, gebruikersnaam en wachtwoord in.")
         else:
             try:
-                email_alias = f"{child_username}@moni.local"
+                email_alias = f"{child_username}@moni.fakeuser.com"
                 result = supabase.auth.sign_up(
                     {"email": email_alias, "password": child_password}
                 )
