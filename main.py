@@ -6,7 +6,7 @@ import uuid
 from supabase import create_client, Client
 
 # 1) Pagina‐configuratie
-st.set_page_config(page_title="💰 Zakgeld Spel", layout="centered")
+st.set_page_config(page_title="💰 Moni", layout="centered")
 
 # 2) Supabase configuratie
 SUPABASE_URL = st.secrets["supabase_url"]
@@ -51,7 +51,7 @@ if not st.session_state.logged_in:
                         result = supabase.auth.sign_up({"email": email, "password": password})
                         if result.user:
     st.success("🎉 Je account is aangemaakt! Bekijk je inbox om je e-mailadres te bevestigen. ✉️")
-    st.info("Welkom bij *Zakgeld Spel* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")
+    st.info("Welkom bij *Moni* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")
                         else:
                             st.error("❌ Kon geen account aanmaken.")
                     except Exception as e:
