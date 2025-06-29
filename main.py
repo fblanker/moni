@@ -50,9 +50,8 @@ if not st.session_state.logged_in:
                     try:
                         result = supabase.auth.sign_up({"email": email, "password": password})
                         if result.user:
-    st.success("🎉 Je account is aangemaakt! Bekijk je inbox om je e-mailadres te bevestigen. ✉️")
-    st.info("Welkom bij *Moni* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")
-    st.info("Welkom bij *Moni* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")
+                            st.success("🎉 Je account is aangemaakt! Bekijk je inbox om je e-mailadres te bevestigen. ✉️")
+                            st.info("Welkom bij *Moni* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")
                         else:
                             st.error("❌ Kon geen account aanmaken.")
                     except Exception as e:
