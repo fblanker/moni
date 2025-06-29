@@ -5,3 +5,4 @@ pandas
 datetime
 altair
 uuid
+supabase
