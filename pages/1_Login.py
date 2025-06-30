@@ -20,6 +20,7 @@ if login_type == "Ouder":
             result = supabase.auth.sign_in_with_password({"email": email, "password": password})
             if result.session:
                 st.session_state.logged_in = True
+        st.session_state.login_success_message = f"✅ Welkom, {email}!"
                 st.session_state.user_email = email
                 st.session_state.user_type = "ouder"
                 st.success(f"✅ Welkom terug, {email}!")
@@ -42,6 +43,7 @@ else:
                 result = supabase.auth.sign_in_with_password({"email": login_email, "password": wachtwoord})
                 if result.session:
                     st.session_state.logged_in = True
+        st.session_state.login_success_message = f"✅ Welkom, {email}!"
                     st.session_state.user_email = login_email
                     st.session_state.user_type = "kind"
                     st.session_state.user_username = gebruikersnaam
