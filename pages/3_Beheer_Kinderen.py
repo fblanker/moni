@@ -10,13 +10,13 @@ if not st.session_state.get("logged_in") or st.session_state.get("user_type") !=
 
 st.title("👨‍👧 Kindaccounts beheren")
 
-# Authenticated Supabase-gebruiker ophalen
+# Supabase gebruiker ophalen
 auth_user = supabase.auth.get_user()
 if not auth_user or not auth_user.user or not auth_user.user.email:
-    st.error("Fout: geen actieve Supabase-sessie gevonden. Log opnieuw in.")
+    st.error("Geen actieve Supabase-gebruiker gevonden.")
     st.stop()
 
-ouder_email = auth_user.user.email  # Gebruik email van Supabase sessie (werkt met RLS!)
+ouder_email = auth_user.user.email
 
 # Nieuw kindaccount aanmaken
 st.subheader("➕ Nieuw kindaccount")
@@ -33,7 +33,7 @@ if st.button("✅ Kindaccount aanmaken"):
             result = supabase.auth.sign_up({"email": email_alias, "password": child_password})
             if result.user:
                 supabase.table("kind_profielen").insert({
-                    "ouder_email": ouder_email,
+                    "email": ouder_email,
                     "kind_email": email_alias,
                     "gebruikersnaam": child_username,
                     "naam": child_name
@@ -45,7 +45,7 @@ if st.button("✅ Kindaccount aanmaken"):
 
 # Bestaande kinderen tonen en bewerken
 st.subheader("📋 Mijn kinderen")
-kinderen = supabase.table("kind_profielen").select("*").eq("ouder_email", ouder_email).execute().data
+kinderen = supabase.table("kind_profielen").select("*").eq("email", ouder_email).execute().data
 
 if not kinderen:
     st.info("Nog geen kinderen toegevoegd.")
