@@ -1,7 +1,5 @@
-# 📄 moni/pages/1_Login.py
 import streamlit as st
 from shared.supabase_client import get_supabase
-import uuid
 
 supabase = get_supabase()
 
@@ -31,7 +29,7 @@ if login_type == "Ouder":
         except Exception as e:
             st.error(f"Fout bij inloggen: {e}")
 
-else:  # Kind-login
+else:
     gebruikersnaam = st.text_input("👧 Gebruikersnaam kind")
     wachtwoord = st.text_input("🔑 Wachtwoord", type="password")
 
@@ -41,9 +39,7 @@ else:  # Kind-login
         else:
             login_email = f"{gebruikersnaam}@moni.fakeuser.com"
             try:
-                result = supabase.auth.sign_in_with_password(
-                    {"email": login_email, "password": wachtwoord}
-                )
+                result = supabase.auth.sign_in_with_password({"email": login_email, "password": wachtwoord})
                 if result.session:
                     st.session_state.logged_in = True
                     st.session_state.user_email = login_email
