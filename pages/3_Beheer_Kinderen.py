@@ -16,7 +16,7 @@ if not auth_user or not auth_user.user or not auth_user.user.email:
     st.error("Geen actieve Supabase-gebruiker gevonden.")
     st.stop()
 
-ouder_email = auth_user.user.email
+email = auth_user.user.email
 
 # Nieuw kindaccount aanmaken
 st.subheader("➕ Nieuw kindaccount")
@@ -33,7 +33,7 @@ if st.button("✅ Kindaccount aanmaken"):
             result = supabase.auth.sign_up({"email": email_alias, "password": child_password})
             if result.user:
                 supabase.table("kind_profielen").insert({
-                    "email": ouder_email,
+                    "email": email,
                     "kind_email": email_alias,
                     "gebruikersnaam": child_username,
                     "naam": child_name
@@ -45,7 +45,7 @@ if st.button("✅ Kindaccount aanmaken"):
 
 # Bestaande kinderen tonen en bewerken
 st.subheader("📋 Mijn kinderen")
-kinderen = supabase.table("kind_profielen").select("*").eq("email", ouder_email).execute().data
+kinderen = supabase.table("kind_profielen").select("*").eq("email", email).execute().data
 
 if not kinderen:
     st.info("Nog geen kinderen toegevoegd.")
