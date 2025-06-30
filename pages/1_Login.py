@@ -18,7 +18,7 @@ if st.button("Log in"):
             st.session_state.logged_in = True
             st.session_state.email = email
             st.session_state.login_success_message = f"✅ Welkom, {email}!"
-            st.experimental_rerun()
+            st.rerun()
     except Exception as e:
         st.error(f"Fout bij inloggen: {e}")
 
