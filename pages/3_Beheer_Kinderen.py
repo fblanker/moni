@@ -12,43 +12,47 @@ if "email" not in st.session_state:
     st.stop()
 
 # ✅ Toon ingelogd e-mailadres
-st.markdown(f"✅ Ingelogd als: **{st.session_state.email}**")
+ouder_email = st.session_state.email
+st.markdown(f"✅ Ingelogd als: **{ouder_email}**")
 
 # ➕ Kind toevoegen
 with st.expander("➕ Nieuw kind toevoegen"):
-    nieuwe_naam = st.text_input("Naam van kind", key="kind_toevoegen_naam")
-    nieuwe_gebruikersnaam = st.text_input("Gebruikersnaam van kind", key="kind_toevoegen_gebruikersnaam")
+    nieuwe_naam = st.text_input("Naam van kind", key="nieuw_naam_kind")
+    nieuwe_gebruikersnaam = st.text_input("Gebruikersnaam van kind", key="nieuw_gebruikersnaam_kind")
 
-    if st.button("Kind toevoegen", key="knop_kind_toevoegen"):
+    if st.button("Kind toevoegen"):
         if not nieuwe_naam or not nieuwe_gebruikersnaam:
             st.warning("Vul zowel de naam als gebruikersnaam in.")
         else:
             try:
                 response = supabase.table("kind_profielen").insert({
-                    "email": st.session_state.email,
+                    "email": ouder_email,
                     "naam": nieuwe_naam,
                     "gebruikersnaam": nieuwe_gebruikersnaam
                 }).execute()
 
-                if response.status_code == 201:
+                if response.data:
                     st.success("✅ Kind toegevoegd!")
                     st.rerun()
                 else:
-                    st.error(f"❌ Fout bij toevoegen kind: {response.data}")
+                    st.error(f"❌ Fout bij toevoegen kind: {response}")
             except Exception as e:
                 st.error(f"❌ Fout bij toevoegen kind: {e}")
 
-# 📋 Toon bestaande kinderen
-st.subheader("📋 Jouw kinderen")
-
+# 👧 Kinderen van deze ouder ophalen en tonen
 try:
-    kinderen_response = supabase.table("kind_profielen").select("*").eq("email", st.session_state.email).execute()
+    kinderen_response = supabase.table("kind_profielen") \
+        .select("*") \
+        .eq("email", ouder_email) \
+        .execute()
+
     kinderen = kinderen_response.data or []
 
     if not kinderen:
         st.info("Je hebt nog geen kinderen toegevoegd.")
     else:
+        st.subheader("📋 Mijn kinderen")
         for kind in kinderen:
-            st.markdown(f"👧 **{kind['naam']}**  (`{kind['gebruikersnaam']}`)")
+            st.markdown(f"👧 **{kind['naam']}** – _Gebruikersnaam:_ `{kind['gebruikersnaam']}`")
 except Exception as e:
     st.error(f"❌ Fout bij ophalen kinderen: {e}")
