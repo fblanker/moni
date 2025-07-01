@@ -1,25 +1,54 @@
-# 📄 moni/pages/2_Register_Ouder.py
+# 📄 3_Beheer_Kinderen.py
 import streamlit as st
 from shared.supabase_client import get_supabase
 
 supabase = get_supabase()
 
-st.set_page_config(page_title="👪 Ouder Registratie", layout="centered")
-st.title("👪 Ouderaccount aanmaken")
+st.title("👨‍👧 Beheer Kinderen")
 
-email = st.text_input("✉️ E-mailadres ouder")
-password = st.text_input("🔑 Kies een wachtwoord", type="password")
+# 🔐 Check of iemand is ingelogd
+if "email" not in st.session_state:
+    st.warning("🔐 Je bent niet ingelogd. [Log hier in 👉](./1_Login)")
+    st.stop()
 
-if st.button("➕ Account aanmaken"):
-    if not email or not password:
-        st.warning("Vul zowel e-mailadres als wachtwoord in.")
+# ✅ Toon ingelogd e-mailadres
+st.markdown(f"✅ Ingelogd als: **{st.session_state.email}**")
+
+# ➕ Kind toevoegen
+with st.expander("➕ Nieuw kind toevoegen"):
+    nieuwe_naam = st.text_input("Naam van kind", key="kind_toevoegen_naam")
+    nieuwe_gebruikersnaam = st.text_input("Gebruikersnaam van kind", key="kind_toevoegen_gebruikersnaam")
+
+    if st.button("Kind toevoegen", key="knop_kind_toevoegen"):
+        if not nieuwe_naam or not nieuwe_gebruikersnaam:
+            st.warning("Vul zowel de naam als gebruikersnaam in.")
+        else:
+            try:
+                response = supabase.table("kind_profielen").insert({
+                    "email": st.session_state.email,
+                    "naam": nieuwe_naam,
+                    "gebruikersnaam": nieuwe_gebruikersnaam
+                }).execute()
+
+                if response.status_code == 201:
+                    st.success("✅ Kind toegevoegd!")
+                    st.rerun()
+                else:
+                    st.error(f"❌ Fout bij toevoegen kind: {response.data}")
+            except Exception as e:
+                st.error(f"❌ Fout bij toevoegen kind: {e}")
+
+# 📋 Toon bestaande kinderen
+st.subheader("📋 Jouw kinderen")
+
+try:
+    kinderen_response = supabase.table("kind_profielen").select("*").eq("email", st.session_state.email).execute()
+    kinderen = kinderen_response.data or []
+
+    if not kinderen:
+        st.info("Je hebt nog geen kinderen toegevoegd.")
     else:
-        try:
-            result = supabase.auth.sign_up({"email": email, "password": password})
-            if result.user:
-                st.success("🎉 Je account is aangemaakt! Bekijk je inbox om je e-mailadres te bevestigen. ✉️")
-                st.info("Welkom bij *Moni* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")
-            else:
-                st.error("❌ Er ging iets mis bij het aanmaken van het account.")
-        except Exception as e:
-            st.error(f"Fout bij aanmaken account: {e}")
+        for kind in kinderen:
+            st.markdown(f"👧 **{kind['naam']}**  (`{kind['gebruikersnaam']}`)")
+except Exception as e:
+    st.error(f"❌ Fout bij ophalen kinderen: {e}")
