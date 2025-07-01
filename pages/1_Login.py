@@ -16,7 +16,8 @@ if st.button("Log in"):
         })
         if result.user:
             st.session_state.logged_in = True
-            st.session_state.email = result.user.email
+            st.session_state.email     = result.user.email
+            st.session_state.user_id   = result.user.id
             st.session_state.login_success_message = f"✅ Welkom, {email}!"
             st.rerun()
     except Exception as e:
@@ -25,3 +26,4 @@ if st.button("Log in"):
 if "login_success_message" in st.session_state:
     st.success(st.session_state.login_success_message)
     del st.session_state.login_success_message
+
