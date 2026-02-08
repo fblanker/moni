@@ -1,6 +1,6 @@
 # 📄 pages/3_Beheer_Kinderen.py
 import streamlit as st
-from shared.supabase_client import get_supabase
+from shared.supabase_client import attach_supabase_session, get_supabase
 
 try:
     supabase = get_supabase()

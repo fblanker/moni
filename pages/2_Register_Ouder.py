@@ -1,5 +1,5 @@
 import streamlit as st
-from shared.supabase_client import get_supabase
+from shared.supabase_client import get_app_base_url, get_supabase
 
 try:
     supabase = get_supabase()
@@ -19,7 +19,11 @@ if st.button("➕ Account aanmaken"):
         st.warning("Vul zowel e-mailadres als wachtwoord in.")
     else:
         try:
-            result = supabase.auth.sign_up({"email": email, "password": password})
+            app_base_url = get_app_base_url()
+            payload = {"email": email, "password": password}
+            if app_base_url:
+                payload["options"] = {"email_redirect_to": app_base_url}
+            result = supabase.auth.sign_up(payload)
             if result.user:
                 st.success("🎉 Je account is aangemaakt! Bekijk je inbox om je e-mailadres te bevestigen. ✉️")
                 st.info("Welkom bij *Moni* – de leukste manier om kinderen te leren omgaan met geld! 💰👧🧠")

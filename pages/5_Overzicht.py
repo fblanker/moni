@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-from shared.supabase_client import get_supabase
+from shared.supabase_client import attach_supabase_session, get_supabase
 
 try:
     supabase = get_supabase()
