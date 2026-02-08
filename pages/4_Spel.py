@@ -118,6 +118,13 @@ if st.button("✅ Bevestig week"):
         "actie": actie,
         "rente": rente,
         "totaal_over": nieuw_saldo_met_rente,
+        "Week_ID": week_id,
+        "Inkomen": inkomen,
+        "Uitgaven": uitgaven,
+        "Opgenomen": opname,
+        "Actie": actie,
+        "Rente": rente,
+        "Totaal_Over": nieuw_saldo_met_rente
     }
     try:
         supabase.table("zakgeld_data").insert(row).execute()
@@ -129,3 +136,6 @@ if st.button("✅ Bevestig week"):
             "dat je Supabase RLS policies inserts toestaan voor deze gebruiker."
         )
         st.error(f"Technische fout: {exc}")
+    supabase.table("zakgeld_data").insert(row).execute()
+    st.success("Week opgeslagen!")
+    st.rerun()
