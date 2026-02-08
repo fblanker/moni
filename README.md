@@ -24,22 +24,10 @@ If you deploy on Streamlit Cloud, add the same keys in **App Settings → Secret
 ```toml
 supabase_url = "https://YOUR_PROJECT.supabase.co"
 supabase_key = "YOUR_SUPABASE_ANON_KEY"
-app_base_url = "https://YOUR-APP-NAME.streamlit.app"
 ```
 > Streamlit Cloud does not read GitHub Actions secrets.
 
-### 2) Email confirmation redirect
-Supabase email confirmations will redirect to `localhost` unless you configure a public URL.
-
-1. In Supabase, go to **Authentication → URL Configuration**.
-2. Set **Site URL** to your Streamlit app URL (for example: `https://YOUR-APP-NAME.streamlit.app`).
-3. Add the same URL to **Redirect URLs**.
-4. Provide the URL to the app via `app_base_url` in Streamlit secrets (see above). This lets the app set `email_redirect_to` during sign-up.
-
-**Troubleshooting**
-- Error `{"error":"requested path is invalid"}` usually means the redirect URL is not in your Supabase **Redirect URLs** list. Add both `https://YOUR-APP-NAME.streamlit.app` and `https://YOUR-APP-NAME.streamlit.app/` to be safe.
-
-### 3) Run the app
+### 2) Run the app
 ```bash
 streamlit run app.py
 ```

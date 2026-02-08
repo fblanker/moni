@@ -5,7 +5,6 @@ from shared.supabase_client import attach_supabase_session, get_supabase
 
 try:
     supabase = get_supabase()
-    attach_supabase_session(supabase)
 except RuntimeError as exc:
     st.error(str(exc))
     st.stop()
