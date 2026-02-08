@@ -129,3 +129,6 @@ if st.button("✅ Bevestig week"):
             "dat je Supabase RLS policies inserts toestaan voor deze gebruiker."
         )
         st.error(f"Technische fout: {exc}")
+    supabase.table("zakgeld_data").insert(row).execute()
+    st.success("Week opgeslagen!")
+    st.rerun()

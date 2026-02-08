@@ -40,6 +40,10 @@ Supabase email confirmations will redirect to `localhost` unless you configure a
 - Error `{"error":"requested path is invalid"}` usually means the redirect URL is not in your Supabase **Redirect URLs** list. Add both `https://YOUR-APP-NAME.streamlit.app` and `https://YOUR-APP-NAME.streamlit.app/` to be safe.
 
 ### 3) Run the app
+```
+> Streamlit Cloud does not read GitHub Actions secrets.
+
+### 2) Run the app
 ```bash
 streamlit run app.py
 ```
