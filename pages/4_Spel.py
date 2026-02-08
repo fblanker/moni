@@ -77,7 +77,7 @@ response = (
     .execute()
 )
 data = response.data or []
-prev_balance = float(data[-1]["Totaal_Over"]) if data else 0
+prev_balance = float(data[-1]["totaal_over"]) if data else 0
 
 inkomen = allowance + klusjes
 uitgaven = totale_kosten
@@ -111,6 +111,13 @@ if st.button("✅ Bevestig week"):
     row = {
         "kind_id": kind_id,
         "ouder_id": kind_profiel.get("user_id"),
+        "week_id": week_id,
+        "inkomen": inkomen,
+        "uitgaven": uitgaven,
+        "opgenomen": opname,
+        "actie": actie,
+        "rente": rente,
+        "totaal_over": nieuw_saldo_met_rente,
         "Week_ID": week_id,
         "Inkomen": inkomen,
         "Uitgaven": uitgaven,

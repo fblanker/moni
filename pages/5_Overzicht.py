@@ -57,14 +57,14 @@ if not records:
     st.stop()
 
 df = pd.DataFrame(records)
-df["Week_ID"] = pd.Categorical(df["Week_ID"], ordered=True)
-df = df.sort_values("Week_ID")
+df["week_id"] = pd.Categorical(df["week_id"], ordered=True)
+df = df.sort_values("week_id")
 
 st.dataframe(df)
 
 chart = alt.Chart(df).mark_line().encode(
-    x="Week_ID:N",
-    y="Totaal_Over:Q"
+    x="week_id:N",
+    y="totaal_over:Q"
 ).properties(title="📈 Cumulatief Saldo", width=700)
 
 st.altair_chart(chart, use_container_width=True)
