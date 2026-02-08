@@ -26,6 +26,9 @@ with ouder_tab:
                 st.session_state.email = result.user.email
                 st.session_state.user_email = result.user.email
                 st.session_state.user_id = result.user.id
+                if result.session:
+                    st.session_state.access_token = result.session.access_token
+                    st.session_state.refresh_token = result.session.refresh_token
                 st.session_state.role = "ouder"
                 st.session_state.login_success_message = f"✅ Welkom, {email}!"
                 st.rerun()

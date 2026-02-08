@@ -37,6 +37,16 @@ def get_app_base_url() -> str | None:
     return _normalize_supabase_url(url)
 
 
+def attach_supabase_session(supabase) -> None:
+    access_token = st.session_state.get("access_token")
+    refresh_token = st.session_state.get("refresh_token")
+    if access_token and refresh_token:
+        try:
+            supabase.auth.set_session(access_token, refresh_token)
+        except Exception:
+            pass
+
+
 @st.cache_resource(show_spinner=False)
 def get_supabase():
     url, key = _get_supabase_credentials()
