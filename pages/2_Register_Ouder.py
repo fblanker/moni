@@ -5,6 +5,7 @@ supabase = get_supabase()
 
 st.set_page_config(page_title="📝 Registreer als Ouder", layout="centered")
 st.title("📝 Registreer je als ouder")
+st.info("Maak hier een ouder-account aan. Daarna kun je kinderen toevoegen en hun spel instellen.")
 
 email = st.text_input("✉️ E-mailadres")
 password = st.text_input("🔑 Kies een wachtwoord", type="password")
