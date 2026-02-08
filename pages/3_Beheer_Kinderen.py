@@ -2,12 +2,20 @@
 import streamlit as st
 from shared.supabase_client import get_supabase
 
-supabase = get_supabase()
+try:
+    supabase = get_supabase()
+except RuntimeError as exc:
+    st.error(str(exc))
+    st.stop()
 
 # ————————————————
 # 1) Check Streamlit session_state, not supabase.auth.get_user()
 if not st.session_state.get("logged_in"):
     st.warning("🔐 Je bent niet ingelogd. [Log hier in 👉](./1_Login)")
+    st.stop()
+
+if st.session_state.get("role") != "ouder":
+    st.warning("Deze pagina is alleen voor ouders.")
     st.stop()
 
 ouder_email = st.session_state.email

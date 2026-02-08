@@ -1,7 +1,11 @@
 import streamlit as st
 from shared.supabase_client import get_supabase
 
-supabase = get_supabase()
+try:
+    supabase = get_supabase()
+except RuntimeError as exc:
+    st.error(str(exc))
+    st.stop()
 
 st.title("🔐 Inloggen")
 

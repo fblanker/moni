@@ -3,7 +3,11 @@ import pandas as pd
 import altair as alt
 from shared.supabase_client import get_supabase
 
-supabase = get_supabase()
+try:
+    supabase = get_supabase()
+except RuntimeError as exc:
+    st.error(str(exc))
+    st.stop()
 st.set_page_config(page_title="📊 Overzicht", layout="centered")
 
 if not st.session_state.get("logged_in"):
