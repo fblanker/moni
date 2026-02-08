@@ -50,6 +50,9 @@ if role == "ouder":
     keuze = st.selectbox("Voor welk kind speel je deze week?", list(opties.keys()))
     kind_id = opties[keuze]
     st.session_state.kind_id = kind_id
+elif not kind_id:
+    st.warning("Selecteer eerst een kind of log in als ouder.")
+    st.stop()
 
 kind_profiel = get_kind_profiel(kind_id)
 if not kind_profiel:

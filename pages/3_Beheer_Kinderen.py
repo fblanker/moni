@@ -18,7 +18,7 @@ if st.session_state.get("role") != "ouder":
     st.warning("Deze pagina is alleen voor ouders.")
     st.stop()
 
-ouder_email = st.session_state.email
+ouder_email = st.session_state.get("email") or st.session_state.get("user_email")
 ouder_id    = st.session_state.user_id  # set this when you log in!
 
 # ————————————————
