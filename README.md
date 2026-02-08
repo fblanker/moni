@@ -36,6 +36,9 @@ Supabase email confirmations will redirect to `localhost` unless you configure a
 3. Add the same URL to **Redirect URLs**.
 4. Provide the URL to the app via `app_base_url` in Streamlit secrets (see above). This lets the app set `email_redirect_to` during sign-up.
 
+**Troubleshooting**
+- Error `{"error":"requested path is invalid"}` usually means the redirect URL is not in your Supabase **Redirect URLs** list. Add both `https://YOUR-APP-NAME.streamlit.app` and `https://YOUR-APP-NAME.streamlit.app/` to be safe.
+
 ### 3) Run the app
 ```bash
 streamlit run app.py
