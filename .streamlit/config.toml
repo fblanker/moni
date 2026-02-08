@@ -3,6 +3,3 @@ headless = true
 
 [theme]
 base="light"
-
-[general]
-pageTitle = "Moni"
