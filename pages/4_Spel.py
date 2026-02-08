@@ -4,6 +4,7 @@ from datetime import date
 
 try:
     supabase = get_supabase()
+    attach_supabase_session(supabase)
 except RuntimeError as exc:
     st.error(str(exc))
     st.stop()
@@ -118,6 +119,16 @@ if st.button("✅ Bevestig week"):
         "Rente": rente,
         "Totaal_Over": nieuw_saldo_met_rente
     }
+    try:
+        supabase.table("zakgeld_data").insert(row).execute()
+        st.success("Week opgeslagen!")
+        st.rerun()
+    except Exception as exc:
+        st.error(
+            "Opslaan mislukt. Controleer of je bent ingelogd als ouder en "
+            "dat je Supabase RLS policies inserts toestaan voor deze gebruiker."
+        )
+        st.error(f"Technische fout: {exc}")
     supabase.table("zakgeld_data").insert(row).execute()
     st.success("Week opgeslagen!")
     st.rerun()
